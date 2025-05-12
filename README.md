@@ -1,1 +1,1 @@
-# NeurIPS2025_PCG
+# NeurIPS2025 - PCG
