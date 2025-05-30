@@ -1,0 +1,14 @@
+numpy
+pandas
+matplotlib
+scikit-learn
+scipy
+torch==2.4.1+cu121
+torchvision==0.19.1+cu121
+torchaudio==2.4.1+cu121
+lpips
+robustbench
+wandb
+gdown
+datasets==3.1.0
+tqdm
