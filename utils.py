@@ -175,12 +175,7 @@ class VGG19(nn.Module):
         loss += self.feature_loss(x)
 
         return loss/16
-    
-gen_transform = gg_preprocessing = transforms.Compose([
-    transforms.Resize((256, 256)),                       
-    transforms.Normalize(mean=cfg.mean,         
-                         std=cfg.std)          
-])
+
 
 vgg_preprocessing = transforms.Compose([
     transforms.Resize((224, 224)),                           # Resize to 224x224
