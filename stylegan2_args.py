@@ -1,7 +1,7 @@
 import config as cfg 
 class Args:
     def __init__(self, dataset_path=cfg.dataset_path, dataset_name=cfg.dataset, arch=cfg.arch, iter=cfg.iter, batch=cfg.batch, output_path=cfg.output_path,
-                 size=cfg.size, latent=cfg.latent, mlp=cfg.mlp, ckpt=cfg.ckpt, lr=cfg.lr):
+                 size=cfg.size, latent=cfg.latent, mlp=cfg.mlp, ckpt=cfg.ckpt, lr=cfg.lr, finetune_generator=cfg.finetune_generator):
         
         self.dataset_path = dataset_path
         self.dataset_name = dataset_name
@@ -50,5 +50,9 @@ class Args:
 
         # -- Single-GPU (no distributed)
         self.distributed = False
-        self.local_rank = 0    
+        self.local_rank = 0  
+
+        # If finetuning the generator during encoder training
+        self.finetune_generator = finetune_generator
+        
         

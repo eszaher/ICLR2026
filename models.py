@@ -784,7 +784,7 @@ class Discriminator(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, size, channel_multiplier=2, blur_kernel=[1, 3, 3, 1], output_channels=None):
+    def __init__(self, size, latent_dim=512, channel_multiplier=2, blur_kernel=[1, 3, 3, 1]):
         super().__init__()
 
         channels = {
@@ -795,41 +795,30 @@ class Encoder(nn.Module):
             64: 256 * channel_multiplier,
             128: 128 * channel_multiplier,
             256: 64 * channel_multiplier,
-            #512: 32 * channel_multiplier,
-            #1024: 16 * channel_multiplier,
         }
 
         convs = [ConvLayer(3, channels[size], 1)]
-
         log_size = int(math.log(size, 2))
-
         in_channel = channels[size]
 
         for i in range(log_size, 2, -1):
             out_channel = channels[2 ** (i - 1)]
-
             convs.append(ResBlock(in_channel, out_channel, blur_kernel))
-
             in_channel = out_channel
 
         self.convs = nn.Sequential(*convs)
-
         self.final_conv = ConvLayer(in_channel, channels[4], 3)
 
-        if output_channels is None:
-            output_channels = channels[4]
-
         self.final_linear = nn.Sequential(
-            EqualLinear(channels[4] * 4 * 4, output_channels)
+            EqualLinear(channels[4] * 4 * 4, latent_dim)
         )
 
     def forward(self, input):
         out = self.convs(input)
         out = self.final_conv(out)
-        batch, _, _, _ = out.shape
+        batch = out.shape[0]
         out = out.view(batch, -1)
         out = self.final_linear(out)
-
         return out
     
     

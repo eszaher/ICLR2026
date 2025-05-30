@@ -7,6 +7,11 @@ from sgan_utils import *
 from non_leaking import *
 from ops import *
 import random
+from torchvision import transforms, utils as vutils
+from tqdm import tqdm
+from models import Encoder  # VGG19 must be defined or imported from somewhere
+from config import *
+from utils import VGG19, vgg_preprocessing
 
 def train_stylegan2(
     args, 
@@ -504,3 +509,91 @@ def train_stylechexplain(
             )
 
 
+
+def train_encoder(args, dataloader, g_ema, device, finetune_generator=False):
+    latent_dim = args.latent
+    image_size = args.size
+    model_name = args.dataset_name + "_enc"
+
+    encoder = Encoder(size=image_size, latent_dim=latent_dim).to(device)
+
+    g_ema = g_ema.to(device)
+    vgg = VGG19().to(device)
+    vgg.eval()
+
+    if not finetune_generator:
+        g_ema.eval()
+        for param in g_ema.parameters():
+            param.requires_grad = False
+    else:
+        g_ema.train()
+
+    encoder.train()
+
+    # Setup optimizer depending on whether generator is fine-tuned
+    if finetune_generator:
+        optimizer = optim.Adam([
+            {'params': encoder.parameters(), 'lr': lr_enc},
+            {'params': g_ema.parameters(), 'lr': lr_fine}
+        ], betas=(0.5, 0.999))
+    else:
+        optimizer = optim.Adam(encoder.parameters(), lr=lr_enc, betas=(0.5, 0.999))
+
+    # Output directories
+    save_dir = os.path.join("output", "checkpoint", model_name)
+    sample_dir = os.path.join("output", "sample", model_name)
+    os.makedirs(save_dir, exist_ok=True)
+    os.makedirs(sample_dir, exist_ok=True)
+
+    # Keep a few test samples fixed
+    test_images, _ = next(iter(dataloader))
+    test_images = test_images[:4].to(device)
+
+    for epoch in range(100):
+        total_loss = 0
+        recon_loss_total = 0
+        perceptual_loss_total = 0
+
+        for images, _ in tqdm(dataloader, desc=f"Epoch {epoch}", leave=False):
+            images = images.to(device)
+            latent = encoder(images)
+
+            recon_img, _ = g_ema([latent], input_is_latent=False, randomize_noise=False)
+            recon_img = (recon_img + 1) / 2
+            images = (images + 1) / 2
+
+            recon_vgg = vgg_preprocessing(recon_img)
+            image_vgg = vgg_preprocessing(images)
+
+            mse_loss = F.mse_loss(recon_img, images)
+            perceptual_loss = vgg(torch.cat([recon_vgg, image_vgg], dim=0))
+
+            loss = mse_loss + perceptual_loss
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+            recon_loss_total += mse_loss.item()
+            perceptual_loss_total += perceptual_loss.item()
+
+        print(f"[Epoch {epoch}] Total: {total_loss:.4f} | Recon: {recon_loss_total:.4f} | Percep: {perceptual_loss_total:.4f}")
+
+        # Save checkpoint
+        torch.save({
+            'epoch': epoch,
+            'encoder_state_dict': encoder.state_dict(),
+            'generator_state_dict': g_ema.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'finetune_generator': finetune_generator
+        }, os.path.join(save_dir, f"enc_epoch_{epoch}.pt"))
+
+        # Save test reconstructions
+        encoder.eval()
+        with torch.no_grad():
+            latent_test = encoder(test_images)
+            recon_test, _ = g_ema([latent_test], input_is_latent=False, randomize_noise=False)
+            img_cat = torch.cat([test_images, recon_test], dim=3)
+            vutils.save_image(img_cat, os.path.join(sample_dir, f"epoch_{epoch}.png"), normalize=True)
+        encoder.train()

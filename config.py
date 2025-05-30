@@ -19,6 +19,11 @@ std=[0.5, 0.5, 0.5]
 mlp = 8
 ckpt = None
 lr = 0.002
+lr_fine = 0.0001
+finetune_generator = False  # If True, the generator will be finetuned during encoder training
+
+#Encoder
+lr_enc = 0.001
 
 # CLF
 mean_clf = [0.485, 0.456, 0.406]
