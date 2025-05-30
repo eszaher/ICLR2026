@@ -7,6 +7,83 @@ from torchvision.datasets import MNIST
 import os
 import numpy as np
 import random
+from datasets import load_dataset
+
+class AFHQDataset:
+    """
+    Wraps the HuggingFace ‘huggan/afhq’ dataset as a torch DataLoader.
+    """
+    def __init__(self,
+                 split: str = "train",
+                 image_size: int = 256,
+                 batch_size: int = 32,
+                 num_workers: int = 12):
+        # Load via 🤗 Datasets
+        self.raw = load_dataset("huggan/afhq", split=split)
+        self.image_size = image_size
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+        # Define your torchvision transforms
+        self.transform = transforms.Compose([
+            transforms.Resize(self.image_size),
+            transforms.CenterCrop(self.image_size),
+            transforms.ToTensor(),
+            transforms.Normalize([0.5]*3, [0.5]*3),
+        ])
+
+
+        def _transform(example):
+            img = example["image"]
+            example["pixel_values"] = self.transform(img)
+            return example
+
+        # apply transforms on the fly
+        self.ds = self.raw.with_transform(_transform)
+
+    def get_dataloader(self, shuffle: bool = True):
+        # Only keep 'pixel_values' for PyTorch
+        return DataLoader(
+            self.ds,
+            batch_size=self.batch_size,
+            shuffle=shuffle,
+            num_workers=self.num_workers,
+            collate_fn=lambda examples: torch.stack([ex["pixel_values"] for ex in examples]),
+            pin_memory=True,
+        )
+
+
+class PlantVillageDataset:
+    """
+    Prepares the PlantVillage (or other plant) dataset like in your Plant_last_CF.ipynb.
+    """
+    def __init__(self,
+                 img_dir: str,
+                 image_size: int = 256,
+                 batch_size: int = 32,
+                 num_workers: int = 12):
+        self.img_dir = img_dir
+        self.image_size = image_size
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+        self.transform = transforms.Compose([
+            transforms.Resize(self.image_size),
+            transforms.CenterCrop(self.image_size),
+            transforms.ToTensor(),
+            transforms.Normalize([0.5]*3, [0.5]*3),
+        ])
+        self.ds = datasets.ImageFolder(self.img_dir, transform=self.transform)
+
+    def get_dataloader(self, shuffle: bool = True):
+        return DataLoader(
+            self.ds,
+            batch_size=self.batch_size,
+            shuffle=shuffle,
+            num_workers=self.num_workers,
+            pin_memory=True,
+        )
+    
 
 def _color_digit(img_gray, color_label):
     """
