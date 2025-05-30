@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from utils import *
 import torch.autograd
-
+import gc
 def normalize_img_bc(img):
     """
     Per-image brightness/contrast normalization:
@@ -145,6 +145,21 @@ def full_path_loss(path, generator, classifier, perceptual_model, target_label, 
     
     return geo + lam * clf
 
+def discrete_geodesic_energy(path, generator, is_latent):
+
+    total_energy = 0.0
+    t = path.shape[0] - 1
+    
+    for i in range(t):
+        z_i = path[i]     # shape [latent_dim]
+        z_ip1 = path[i+1]
+        diff = z_ip1 - z_i
+        # Jv => shape [3,32,32]
+        u = Jv(generator, z_i, diff, is_latent, create_graph=True)
+        seg_energy = 0.5*(u ** 2).sum()  # scalar
+        total_energy = total_energy + seg_energy
+    
+    return total_energy
 
 
 def geodesic_only(path_init, generator, perceptual_model, is_latent, steps=30, lr=1e-2):

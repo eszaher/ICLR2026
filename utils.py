@@ -21,7 +21,7 @@ def denormalize_image(image, mean, std):
     std = torch.tensor(std).view(1, 1, -1)
     image = image * std + mean  # Reverse normalization
     return image
-def visualize_transformed_samples(dataloader, num_samples=9):
+def visualize_transformed_samples(dataloader, mean, std, num_samples=9):
     # Create a grid for visualization
     plt.figure(figsize=(10, 10))
     
