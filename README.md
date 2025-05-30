@@ -1,7 +1,7 @@
 # PCG: Perceptual Counterfactual Geodesics
 
 
-A PyTorch implementation of **Perceptual Counterfactual Geodesics (PCG)** for generating semantically meaningful counterfactual explanations on high-dimensional image data. PCG traces geodesics in the latent space of a GAN under a robust perceptual metric, producing on-manifold, perceptually-aligned perturbations.
+A PyTorch implementation of **Perceptual Counterfactual Geodesics (PCG)** for generating semantically meaningful counterfactual explanations on high-dimensional image data. PCG traces geodesics in the latent space of a StyleGAN2 under a robust perceptual metric, producing on-manifold, semantically-aligned, perturbations.
 
 ---
 
